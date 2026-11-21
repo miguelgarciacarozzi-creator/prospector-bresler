@@ -1,4 +1,5 @@
 const cfg=window.APP_CONFIG;
+if(!window.supabase?.createClient) throw new Error('No se pudo cargar la librería de Supabase.');
 const db=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_PUBLISHABLE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 const root=document.getElementById('app');
 const state={user:null,profile:null,clients:[],commune:null,client:null,filter:'OPORTUNIDAD',visit:null,step:0,files:{}};
@@ -44,4 +45,4 @@ function newProspect(){root.innerHTML=top('Nuevo prospecto','Captado en terreno'
 function normalizeRut(s){return s.toUpperCase().replace(/[^0-9K]/g,'')}
 async function saveProspect(e){e.preventDefault();const rut=val('npRut'),nr=normalizeRut(rut);if(!nr)return toast('RUT no válido',true);const {data:existing}=await db.from('pros_clientes').select('id,nombre').eq('rut_normalizado',nr).maybeSingle();if(existing)return toast('Este RUT ya existe: '+existing.nombre,true);let pos=null;try{pos=await getGPS()}catch(e){}const payload={origen:'PROSPECTOR',rut,rut_normalizado:nr,nombre:val('npNombre'),direccion:val('npDireccion'),comuna:val('npComuna').toUpperCase(),telefono:val('npTelefono'),latitud_cosam:pos?.coords.latitude||null,longitud_cosam:pos?.coords.longitude||null,precision_cosam:pos?.coords.accuracy||null,existe_frozen:false,estado:'POR_PROSPECTAR'};const {data,error}=await db.from('pros_clientes').insert(payload).select().single();if(error)return toast(error.message,true);toast('Nuevo prospecto creado');await loadClients();state.client=state.clients.find(x=>x.id===data.id);renderClient()}
 if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-init().catch(err=>{ console.error(err); root.innerHTML=`<section class="login"><div class="login-card"><div class="brand"><img src="logo-bresler.png" alt="Bresler"><h1>Prospección Bresler</h1><p>No fue posible iniciar la aplicación.</p></div><div class="card"><b>Error de inicio</b><div class="meta">${esc(err?.message||String(err))}</div></div><button class="btn btn-primary" onclick="location.reload()">REINTENTAR</button></div></section>`; });
+init();
